@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Modelo padrão de nomenclaturas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    /* Suave animação de entrada */
+    @keyframes fadeIn { from { opacity: .0; transform: translateY(4px);} to { opacity:1; transform: translateY(0);} }
+    [data-animate] { animation: fadeIn .25s ease-out; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+  <div class="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8">
+    <header class="mb-6 sm:mb-8">
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Modelo padrão de nomenclaturas</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Conteúdo sincronizado de uma planilha do Google Sheets (somente leitura).</p>
+    </header>
+
+    <!-- Barra de ações -->
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+      <div class="flex-1">
+        <label class="sr-only" for="q">Buscar</label>
+        <input id="q" type="search" placeholder="Buscar…" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500" />
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btnRefresh" class="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 font-medium">
+          Atualizar agora
+        </button>
+        <span id="stamp" class="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">—</span>
+      </div>
+    </div>
+
+    <!-- Avisos/erros -->
+    <div id="notice" class="hidden rounded-xl border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200 p-3 text-sm"></div>
+
+    <!-- Lista -->
+    <section id="list" class="grid gap-2" aria-live="polite"></section>
+
+    <footer class="mt-10 text-xs text-slate-400">
+      <p>Atualiza automaticamente a cada <span id="refreshLabel">60</span>s. — Feito para o SRI.</p>
+    </footer>
+  </div>
+
+  <script>
+    // ===================== CONFIG =====================
+    // Opção A (recomendada – sem API key): Publique a planilha na Web (Arquivo ▸ Compartilhar ▸ Publicar na Web) e copie o link CSV.
+    // Cole o link completo em CSV_URL. Ex.:
+    // const CSV_URL = "https://docs.google.com/spreadsheets/d/SEU_ID/export?format=csv";
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTtXHlcClOfC9VS2SCnZqzCCRI9YDfp6ibb7C3zN4mTSuw8C3cKO6TChYil-Lt9hA/pub?output=csv";
+
+    // Opção B: Acesse via endpoint GViz (sem publicar CSV). Informe o ID da planilha e o nome da aba.
+    // (Abra a planilha no navegador e pegue o ID no URL após "/d/" e antes de "/edit")
+    const GVIZ_SHEET_ID = ""; // ex.: "1AbCdEf..."
+    const GVIZ_SHEET_NAME = "Página1"; // altere para o nome real da sua aba
+
+    // Ajustes
+    const AUTO_REFRESH_SECONDS = 60; // intervalo de atualização automática
+
+    // ===================== LÓGICA =====================
+    const $q = document.getElementById('q');
+    const $list = document.getElementById('list');
+    const $notice = document.getElementById('notice');
+    const $stamp = document.getElementById('stamp');
+    const $refreshLabel = document.getElementById('refreshLabel');
+    const $btnRefresh = document.getElementById('btnRefresh');
+    $refreshLabel.textContent = String(AUTO_REFRESH_SECONDS);
+
+    // Permite parametrizar via querystring, ex.: ?mode=csv&url=... ou ?sheet=MinhaAba
+    const params = new URLSearchParams(location.search);
+    const paramURL = params.get('url');
+    const paramSheet = params.get('sheet');
+    const mode = params.get('mode') || (CSV_URL ? 'csv' : 'gviz');
+
+    function setStamp(ts = new Date()) {
+      const pad = (n) => n.toString().padStart(2,'0');
+      $stamp.textContent = `Atualizado ${pad(ts.getHours())}:${pad(ts.getMinutes())}:${pad(ts.getSeconds())}`;
+    }
+
+    function showNotice(msg, type = 'warn') {
+      $notice.textContent = msg;
+      $notice.className = type === 'error'
+        ? 'rounded-xl border border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-700 dark:bg-rose-900/30 dark:text-rose-200 p-3 text-sm'
+        : 'rounded-xl border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200 p-3 text-sm';
+      $notice.classList.remove('hidden');
+    }
+
+    function hideNotice(){ $notice.classList.add('hidden'); }
+
+    function normalizeRows(rows) {
+      // Esperamos uma lista de strings (1ª coluna), ignorando cabeçalhos vazios
+      // Remove células vazias
+      return rows
+        .map(r => Array.isArray(r) ? r[0] : r)
+        .map(v => (v ?? '').toString().trim())
+        .filter(v => v.length > 0 && !/^\s*$/.test(v));
+    }
+
+    async function fetchCSV(url) {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('Falha ao carregar CSV');
+      const text = await res.text();
+      // parse extremamente simples: quebra por linhas e pega a primeira coluna
+      const lines = text.split(/\r?\n/);
+      const rows = lines.map(line => {
+        // separa respeitando vírgula básica; para conteúdo com vírgulas entre aspas, seria melhor um parser, mas mantemos simples
+        const parts = line.split(/,(.+)?/)[0];
+        return [parts.replace(/^"|"$/g,'')];
+      });
+      return normalizeRows(rows.slice(0));
+    }
+
+    async function fetchGViz(sheetId, sheetName) {
+      const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('Falha ao carregar GViz');
+      const text = await res.text();
+      const json = JSON.parse(text.replace(/^.*setResponse\(/, '').replace(/\);?\s*$/, ''));
+      if (!json.table || !json.table.rows) throw new Error('Formato inesperado do GViz');
+      const rows = json.table.rows.map(r => (r.c || []).map(c => (c && c.v) ?? ''));
+      return normalizeRows(rows);
+    }
+
+    function renderList(items) {
+      $list.innerHTML = '';
+      if (!items.length) {
+        $list.innerHTML = '<p class="text-sm text-slate-500">Nada para exibir.</p>';
+        return;
+      }
+      for (const v of items) {
+        const row = document.createElement('div');
+        row.className = 'group flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/60 px-4 py-3 [data-animate]';
+
+        const txt = document.createElement('div');
+        txt.className = 'text-sm sm:text-base font-medium text-slate-800 dark:text-slate-100 break-words';
+        txt.textContent = v;
+
+        const actions = document.createElement('div');
+        actions.className = 'flex items-center gap-2';
+
+        const btnCopy = document.createElement('button');
+        btnCopy.className = 'text-xs rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700';
+        btnCopy.textContent = 'Copiar';
+        btnCopy.title = 'Copiar texto';
+        btnCopy.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(v);
+          btnCopy.textContent = 'Copiado!';
+          setTimeout(()=> btnCopy.textContent = 'Copiar', 900);
+        });
+
+        actions.appendChild(btnCopy);
+        row.appendChild(txt);
+        row.appendChild(actions);
+        $list.appendChild(row);
+      }
+    }
+
+    function attachSearch(all) {
+      const apply = () => {
+        const q = ($q.value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        if (!q) return renderList(all);
+        const filtered = all.filter(v => v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(q));
+        renderList(filtered);
+      };
+      $q.removeEventListener('input', apply);
+      $q.addEventListener('input', apply);
+      apply();
+    }
+
+    let timer = null;
+    async function load() {
+      hideNotice();
+      try {
+        const useCSV = (mode === 'csv');
+        const list = useCSV
+          ? await fetchCSV(paramURL || CSV_URL)
+          : await fetchGViz(GVIZ_SHEET_ID, paramSheet || GVIZ_SHEET_NAME);
+        attachSearch(list);
+        setStamp(new Date());
+      } catch (err) {
+        console.error(err);
+        showNotice('Não foi possível carregar a planilha. Verifique as permissões de compartilhamento e as configurações no topo do arquivo.', 'error');
+      }
+    }
+
+    $btnRefresh.addEventListener('click', load);
+
+    // ciclo automático
+    function startAuto(){
+      if (timer) clearInterval(timer);
+      timer = setInterval(load, AUTO_REFRESH_SECONDS * 1000);
+    }
+
+    // Carrega já e inicia auto-refresh
+    load();
+    startAuto();
+  </script>
+</body>
+</html>
