@@ -131,7 +131,7 @@
       }
       for (const v of items) {
         const row = document.createElement('div');
-        row.className = 'group flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-blue px-4 py-3 shadow-sm [data-animate]';
+        row.className = 'group flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm [data-animate]';
 
         const txt = document.createElement('div');
         txt.className = 'text-sm sm:text-base font-medium text-slate-700 break-words';
@@ -141,7 +141,7 @@
         actions.className = 'flex items-center gap-2';
 
         const btnCopy = document.createElement('button');
-        btnCopy.className = 'text-xs rounded-lg border border-slate-900 px-2.5 py-1.5 hover:bg-slate-700';
+        btnCopy.className = 'text-xs rounded-lg border border-black-900 px-2.5 py-1.5 hover:bg-slate-700';
         btnCopy.textContent = 'Copiar';
         btnCopy.title = 'Copiar texto';
         btnCopy.addEventListener('click', async () => {
