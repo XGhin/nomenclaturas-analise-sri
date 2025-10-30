@@ -141,7 +141,11 @@
         actions.className = 'flex items-center gap-2';
 
         const btnCopy = document.createElement('button');
-        btnCopy.className = 'text-xs rounded-lg border border-black-900 px-2.5 py-1.5 hover:bg-slate-700';
+        btnCopy.className =
+        'text-xs font-medium text-slate-700 bg-white border border-slate-300 ' +
+        'px-2.5 py-1.5 rounded-lg hover:bg-slate-700 hover:text-white ' +
+        'focus:outline-none focus:ring-2 focus:ring-blue-500/60 transition';
+
         btnCopy.textContent = 'Copiar';
         btnCopy.title = 'Copiar texto';
         btnCopy.addEventListener('click', async () => {
