@@ -147,7 +147,7 @@
         btnCopy.addEventListener('click', async () => {
           await navigator.clipboard.writeText(v);
           btnCopy.textContent = 'Copiado!';
-          setTimeout(()=> btnCopy.textContent = 'Copiar', 900);
+          setTimeout(()=> btnCopy.textContent = 'Copiar', 100);
         });
 
         actions.appendChild(btnCopy);
