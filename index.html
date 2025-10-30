@@ -12,24 +12,24 @@
     [data-animate] { animation: fadeIn .25s ease-out; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-  <div class="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8">
+<body class="bg-[#0b1220]">
+  <div class="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
     <header class="mb-6 sm:mb-8">
-      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Modelo padrão de nomenclaturas</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Conteúdo sincronizado de uma planilha do Google Sheets (somente leitura).</p>
+      <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">Modelo padrão de nomenclaturas</h1>
+      <p class="text-sm text-slate-600 mt-1">Conteúdo sincronizado de uma planilha do Google Sheets (somente leitura).</p>
     </header>
 
     <!-- Barra de ações -->
     <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
       <div class="flex-1">
         <label class="sr-only" for="q">Buscar</label>
-        <input id="q" type="search" placeholder="Buscar…" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500" />
+        <input id="q" type="search" placeholder="Buscar…" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
       </div>
       <div class="flex items-center gap-2">
-        <button id="btnRefresh" class="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 font-medium">
+        <button id="btnRefresh" class="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 font-medium shadow-sm">
           Atualizar agora
         </button>
-        <span id="stamp" class="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">—</span>
+        <span id="stamp" class="text-xs text-slate-500 whitespace-nowrap">—</span>
       </div>
     </div>
 
@@ -48,8 +48,8 @@
     // ===================== CONFIG =====================
     // Opção A (recomendada – sem API key): Publique a planilha na Web (Arquivo ▸ Compartilhar ▸ Publicar na Web) e copie o link CSV.
     // Cole o link completo em CSV_URL. Ex.:
-    // const CSV_URL = "https://docs.google.com/spreadsheets/d/SEU_ID/export?format=csv";
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTtXHlcClOfC9VS2SCnZqzCCRI9YDfp6ibb7C3zN4mTSuw8C3cKO6TChYil-Lt9hA/pub?output=csv";
+    // const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTtXHlcClOfC9VS2SCnZqzCCRI9YDfp6ibb7C3zN4mTSuw8C3cKO6TChYil-Lt9hA/pub?output=csv";
+    const CSV_URL = ""; // deixe vazio se for usar a opção B (GViz JSON)
 
     // Opção B: Acesse via endpoint GViz (sem publicar CSV). Informe o ID da planilha e o nome da aba.
     // (Abra a planilha no navegador e pegue o ID no URL após "/d/" e antes de "/edit")
@@ -131,17 +131,17 @@
       }
       for (const v of items) {
         const row = document.createElement('div');
-        row.className = 'group flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/60 px-4 py-3 [data-animate]';
+        row.className = 'group flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm [data-animate]';
 
         const txt = document.createElement('div');
-        txt.className = 'text-sm sm:text-base font-medium text-slate-800 dark:text-slate-100 break-words';
+        txt.className = 'text-sm sm:text-base font-medium text-slate-700 break-words';
         txt.textContent = v;
 
         const actions = document.createElement('div');
         actions.className = 'flex items-center gap-2';
 
         const btnCopy = document.createElement('button');
-        btnCopy.className = 'text-xs rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700';
+        btnCopy.className = 'text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 hover:bg-slate-100';
         btnCopy.textContent = 'Copiar';
         btnCopy.title = 'Copiar texto';
         btnCopy.addEventListener('click', async () => {
